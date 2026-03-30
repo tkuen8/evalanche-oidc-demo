@@ -181,9 +181,9 @@ function successPage(tokenData, decoded) {
     h1 { font-size: 1.5rem; margin-bottom: .3rem; color: #155724; }
     .subtitle { color: #666; margin-bottom: 2rem; }
     h2 { font-size: 1.1rem; margin: 1.5rem 0 .75rem; color: #1a1a2e; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    td { padding: .5rem .75rem; border-bottom: 1px solid #eee; font-size: .9rem; vertical-align: top; }
-    td:first-child { font-weight: 600; white-space: nowrap; width: 140px; color: #555; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; table-layout: fixed; }
+    td { padding: .5rem .75rem; border-bottom: 1px solid #eee; font-size: .9rem; vertical-align: top; word-break: break-all; }
+    td:first-child { font-weight: 600; white-space: nowrap; width: 140px; color: #555; word-break: normal; }
     .token-box { background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: .75rem; word-break: break-all; max-height: 120px; overflow-y: auto; margin-bottom: 1rem; }
     .btn { display: inline-block; padding: .75rem 1.5rem; background: #0066cc; color: #fff; border-radius: 8px; text-decoration: none; font-size: .9rem; }
     .btn:hover { background: #0052a3; }
