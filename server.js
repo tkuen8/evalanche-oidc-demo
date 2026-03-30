@@ -179,7 +179,11 @@ app.get('/auth/logout', (req, res) => {
 async function fetchProfiles() {
   // Step 1: Get access token via Client Credentials Flow
   const tokenUrl = `https://${EVALANCHE_DOMAIN}/api/auth/v1/flow/client`;
-  const requestBody = `scope=${encodeURIComponent(API_SCOPE || 'openid')}&client_id=${encodeURIComponent(API_CLIENT_ID)}&client_secret=${encodeURIComponent(API_CLIENT_SECRET)}`;
+  const params = new URLSearchParams();
+  params.set('client_id', API_CLIENT_ID);
+  params.set('client_secret', API_CLIENT_SECRET);
+  if (API_SCOPE) params.set('scope', API_SCOPE);
+  const requestBody = params.toString();
 
   const tokenRes = await fetch(tokenUrl, {
     method: 'POST',
