@@ -13,7 +13,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET || '';
 // REST API credentials (Client Credentials Flow)
 const API_CLIENT_ID = process.env.API_CLIENT_ID || '';
 const API_CLIENT_SECRET = process.env.API_CLIENT_SECRET || '';
-const API_SCOPE = process.env.API_SCOPE || '';
+const API_SCOPE = process.env.API_SCOPE || 'api:restpreview';
 const API_POOL_ID = parseInt(process.env.API_POOL_ID || '29642', 10);
 
 // Determine base URL for redirect_uri
