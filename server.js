@@ -10,6 +10,11 @@ const EVALANCHE_DOMAIN = process.env.EVALANCHE_DOMAIN || '';
 const CLIENT_ID = process.env.CLIENT_ID || '';
 const CLIENT_SECRET = process.env.CLIENT_SECRET || '';
 
+// REST API credentials (Client Credentials Flow)
+const API_CLIENT_ID = process.env.API_CLIENT_ID || '';
+const API_CLIENT_SECRET = process.env.API_CLIENT_SECRET || '';
+const API_SCOPE = process.env.API_SCOPE || 'openid';
+
 // Determine base URL for redirect_uri
 function getBaseUrl(req) {
   if (process.env.RAILWAY_PUBLIC_DOMAIN) {
@@ -150,7 +155,17 @@ app.get('/oauth/callback', async (req, res) => {
     // Decode the ID token (without verification for demo display)
     const decoded = jwt.decode(tokenData.id_token, { complete: true });
 
-    res.send(successPage(tokenData, decoded));
+    // REST API test: fetch 10 profiles via Client Credentials Flow
+    let restResult = null;
+    if (API_CLIENT_ID && API_CLIENT_SECRET) {
+      try {
+        restResult = await fetchProfiles();
+      } catch (err) {
+        restResult = { error: err.message };
+      }
+    }
+
+    res.send(successPage(tokenData, decoded, restResult));
   } catch (err) {
     res.send(errorPage('Netzwerkfehler', `Fehler beim Token-Tausch: ${err.message}`));
   }
@@ -160,7 +175,42 @@ app.get('/auth/logout', (req, res) => {
   res.redirect('/');
 });
 
-function successPage(tokenData, decoded) {
+async function fetchProfiles() {
+  // Step 1: Get access token via Client Credentials Flow
+  const tokenUrl = `https://${EVALANCHE_DOMAIN}/api/auth/v1/flow/client`;
+  const tokenRes = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `scope=${encodeURIComponent(API_SCOPE)}&client_id=${encodeURIComponent(API_CLIENT_ID)}&client_secret=${encodeURIComponent(API_CLIENT_SECRET)}`,
+  });
+
+  const tokenBody = await tokenRes.json();
+  if (!tokenRes.ok) {
+    return { error: `Token-Fehler (${tokenRes.status}): ${JSON.stringify(tokenBody)}`, tokenResponse: tokenBody };
+  }
+
+  // Step 2: Fetch profiles
+  const profilesUrl = `https://${EVALANCHE_DOMAIN}/api/rest/v1/profiles?page=1&pagesize=10`;
+  const profilesRes = await fetch(profilesUrl, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${tokenBody.access_token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  const profilesBody = await profilesRes.json();
+  if (!profilesRes.ok) {
+    return { error: `Profil-Abruf fehlgeschlagen (${profilesRes.status}): ${JSON.stringify(profilesBody)}`, tokenResponse: tokenBody };
+  }
+
+  return { profiles: profilesBody, tokenResponse: tokenBody };
+}
+
+function successPage(tokenData, decoded, restResult) {
   const claims = decoded?.payload || {};
   return `<!DOCTYPE html>
 <html lang="de">
@@ -182,6 +232,12 @@ function successPage(tokenData, decoded) {
     .btn { display: inline-block; padding: .75rem 1.5rem; background: #0066cc; color: #fff; border-radius: 8px; text-decoration: none; font-size: .9rem; }
     .btn:hover { background: #0052a3; }
     .success-icon { font-size: 2rem; margin-bottom: .5rem; }
+    .rest-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e2e8f0; }
+    .rest-section h2 { color: #0066cc; }
+    .rest-error { background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: .8rem; word-break: break-all; color: #721c24; margin-bottom: 1rem; }
+    .rest-ok { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: .75rem 1rem; font-size: .9rem; color: #155724; margin-bottom: 1rem; }
+    .rest-skip { margin-top: 1.5rem; padding: .75rem 1rem; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; font-size: .85rem; color: #856404; margin-bottom: 1.5rem; }
+    .profiles-box { background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: .75rem; word-break: break-all; max-height: 400px; overflow-y: auto; margin-bottom: 1rem; white-space: pre-wrap; }
   </style>
 </head>
 <body>
@@ -210,10 +266,38 @@ function successPage(tokenData, decoded) {
     <h2>ID Token (JWT)</h2>
     <div class="token-box">${tokenData.id_token || '—'}</div>
 
+    ${restResult ? renderRestResult(restResult) : '<div class="rest-skip">REST-API-Test übersprungen (API_CLIENT_ID / API_CLIENT_SECRET nicht konfiguriert)</div>'}
+
     <a href="/auth/logout" class="btn">Zurück zur Startseite</a>
   </div>
 </body>
 </html>`;
+}
+
+function renderRestResult(result) {
+  if (result.error) {
+    return `
+    <div class="rest-section">
+      <h2>REST-API-Test (Profile)</h2>
+      <div class="rest-error">Fehler: ${result.error}</div>
+      ${result.tokenResponse ? `<h3 style="font-size:.95rem;margin-bottom:.5rem;">Token Response:</h3><div class="profiles-box">${JSON.stringify(result.tokenResponse, null, 2)}</div>` : ''}
+    </div>`;
+  }
+
+  const profiles = Array.isArray(result.profiles) ? result.profiles : (result.profiles?.items || result.profiles?.data || [result.profiles]);
+  const count = Array.isArray(profiles) ? profiles.length : '?';
+
+  return `
+  <div class="rest-section">
+    <h2>REST-API-Test (Profile)</h2>
+    <div class="rest-ok">Client Credentials Flow erfolgreich — ${count} Profile abgerufen</div>
+    <table>
+      <tr><td>Access Token</td><td style="font-family:monospace;font-size:.75rem">${result.tokenResponse?.access_token ? result.tokenResponse.access_token.substring(0, 40) + '...' : '—'}</td></tr>
+      <tr><td>expires_in</td><td>${result.tokenResponse?.expires_in ? result.tokenResponse.expires_in + ' Sekunden' : '—'}</td></tr>
+    </table>
+    <h3 style="font-size:.95rem;margin:.75rem 0 .5rem;">Profile (JSON Response):</h3>
+    <div class="profiles-box">${JSON.stringify(result.profiles, null, 2)}</div>
+  </div>`;
 }
 
 function errorPage(title, detail) {
