@@ -1,0 +1,17 @@
+{
+  "name": "evalanche-oidc-demo",
+  "version": "1.0.0",
+  "description": "Demo app to test Evalanche OIDC/OAuth 2.0 authentication",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "crypto": "^1.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
