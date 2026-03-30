@@ -178,18 +178,32 @@ app.get('/auth/logout', (req, res) => {
 async function fetchProfiles() {
   // Step 1: Get access token via Client Credentials Flow
   const tokenUrl = `https://${EVALANCHE_DOMAIN}/api/auth/v1/flow/client`;
+  const requestBody = `scope=${encodeURIComponent(API_SCOPE || 'openid')}&client_id=${encodeURIComponent(API_CLIENT_ID)}&client_secret=${encodeURIComponent(API_CLIENT_SECRET)}`;
+
   const tokenRes = await fetch(tokenUrl, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: (API_SCOPE ? `scope=${encodeURIComponent(API_SCOPE)}&` : '') + `client_id=${encodeURIComponent(API_CLIENT_ID)}&client_secret=${encodeURIComponent(API_CLIENT_SECRET)}`,
+    body: requestBody,
   });
 
-  const tokenBody = await tokenRes.json();
+  const tokenText = await tokenRes.text();
+  let tokenBody;
+  try { tokenBody = JSON.parse(tokenText); } catch { tokenBody = tokenText; }
+
   if (!tokenRes.ok) {
-    return { error: `Token-Fehler (${tokenRes.status}): ${JSON.stringify(tokenBody)}`, tokenResponse: tokenBody };
+    return {
+      error: `Token-Fehler (${tokenRes.status})`,
+      debug: {
+        url: tokenUrl,
+        requestBody: requestBody.replace(API_CLIENT_SECRET, '***'),
+        status: tokenRes.status,
+        responseHeaders: Object.fromEntries(tokenRes.headers.entries()),
+        responseBody: tokenBody,
+      }
+    };
   }
 
   // Step 2: Fetch profiles
@@ -280,6 +294,7 @@ function renderRestResult(result) {
     <div class="rest-section">
       <h2>REST-API-Test (Profile)</h2>
       <div class="rest-error">Fehler: ${result.error}</div>
+      ${result.debug ? `<h3 style="font-size:.95rem;margin-bottom:.5rem;">Debug-Info:</h3><div class="profiles-box">${JSON.stringify(result.debug, null, 2)}</div>` : ''}
       ${result.tokenResponse ? `<h3 style="font-size:.95rem;margin-bottom:.5rem;">Token Response:</h3><div class="profiles-box">${JSON.stringify(result.tokenResponse, null, 2)}</div>` : ''}
     </div>`;
   }
