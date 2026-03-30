@@ -82,12 +82,6 @@ app.get('/', (req, res) => {
       ${getBaseUrl(req)}/oauth/callback
     </div>` : ''}
 
-    <div class="info">
-      <p>Setze folgende Umgebungsvariablen auf Railway:</p>
-      <p style="margin-top:.5rem"><code>EVALANCHE_DOMAIN</code> — z.B. <code>kunde.evalanche.com</code></p>
-      <p><code>CLIENT_ID</code> — Deine Client ID</p>
-      <p><code>CLIENT_SECRET</code> — Dein Client Secret</p>
-    </div>
   </div>
 </body>
 </html>`);
