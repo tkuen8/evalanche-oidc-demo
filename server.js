@@ -13,7 +13,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET || '';
 // REST API credentials (Client Credentials Flow)
 const API_CLIENT_ID = process.env.API_CLIENT_ID || '';
 const API_CLIENT_SECRET = process.env.API_CLIENT_SECRET || '';
-const API_SCOPE = process.env.API_SCOPE || 'openid';
+const API_SCOPE = process.env.API_SCOPE || '';
 
 // Determine base URL for redirect_uri
 function getBaseUrl(req) {
@@ -184,7 +184,7 @@ async function fetchProfiles() {
       'Accept': 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: `scope=${encodeURIComponent(API_SCOPE)}&client_id=${encodeURIComponent(API_CLIENT_ID)}&client_secret=${encodeURIComponent(API_CLIENT_SECRET)}`,
+    body: (API_SCOPE ? `scope=${encodeURIComponent(API_SCOPE)}&` : '') + `client_id=${encodeURIComponent(API_CLIENT_ID)}&client_secret=${encodeURIComponent(API_CLIENT_SECRET)}`,
   });
 
   const tokenBody = await tokenRes.json();
