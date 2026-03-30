@@ -14,6 +14,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET || '';
 const API_CLIENT_ID = process.env.API_CLIENT_ID || '';
 const API_CLIENT_SECRET = process.env.API_CLIENT_SECRET || '';
 const API_SCOPE = process.env.API_SCOPE || '';
+const API_POOL_ID = parseInt(process.env.API_POOL_ID || '29642', 10);
 
 // Determine base URL for redirect_uri
 function getBaseUrl(req) {
@@ -206,19 +207,34 @@ async function fetchProfiles() {
     };
   }
 
-  // Step 2: Fetch profiles
-  const profilesUrl = `https://${EVALANCHE_DOMAIN}/api/rest/v1/profiles?page=1&pagesize=10`;
+  // Step 2: Fetch profiles via POST (requires pool_id)
+  const profilesUrl = `https://${EVALANCHE_DOMAIN}/api/rest/vPreview/profiles`;
   const profilesRes = await fetch(profilesUrl, {
-    method: 'GET',
+    method: 'POST',
     headers: {
       'Authorization': `Bearer ${tokenBody.access_token}`,
       'Accept': 'application/json',
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ pool_id: API_POOL_ID }),
   });
 
-  const profilesBody = await profilesRes.json();
+  const profilesText = await profilesRes.text();
+  let profilesBody;
+  try { profilesBody = JSON.parse(profilesText); } catch { profilesBody = profilesText; }
+
   if (!profilesRes.ok) {
-    return { error: `Profil-Abruf fehlgeschlagen (${profilesRes.status}): ${JSON.stringify(profilesBody)}`, tokenResponse: tokenBody };
+    return {
+      error: `Profil-Abruf fehlgeschlagen (${profilesRes.status})`,
+      debug: {
+        tokenStatus: 'OK',
+        profilesUrl,
+        profilesRequestBody: { pool_id: API_POOL_ID },
+        profilesStatus: profilesRes.status,
+        profilesResponse: profilesBody,
+      },
+      tokenResponse: tokenBody,
+    };
   }
 
   return { profiles: profilesBody, tokenResponse: tokenBody };
